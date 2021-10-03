@@ -1,0 +1,65 @@
+ // invisible snake??
+        if (globalMembers.invisibleDex != -1)
+        {
+            if (snakeDex != globalMembers.invisibleDex)
+            {
+                // TODO: GO for tail (or to an empty space)
+                nextMove = goForTail();
+
+                if (nextMove == 5)
+                {
+                    nextMove = goToEmptySpace();
+                }
+            }
+            // invisible snake that is me
+            else
+            {
+                // TODO: HAVE FUN BEING CASPER...
+                // either it's obtainable or nah, if obtainable, circle it...
+                if (board[apple[0]][apple[1]])
+                {
+//            System.err.println("\n!!!!!!!!!!!!!!!! UNOBTAINABLE !!!!!!!!!!!!!!!!!!\n");
+
+                    nextMove = circleArea(apple, 3);
+                }
+                // circle tail or empty space
+                else
+                {
+                    nextMove = goToEmptySpace();
+                }
+
+                if (nextMove == 5)
+                {
+                    nextMove = goForTail();
+                }
+            }
+        }
+
+        // normal play of chase or parry
+        else
+        {
+            // check if the board is unoccupied before going to the apple
+            if (!board[apple[0]][apple[1]])
+            {
+                nextMove = goToApple(head, apple);
+            }
+            //
+            else
+            {
+                nextMove = goForTail();
+            }
+        }
+
+
+        // TODO: FOLLOW TAIL IF UNABLE TO MAKE MOVE, OR FILL IN GAP FROM NEXT EMPTY SPACE GOING BACK
+
+        // if there is no available path, approach an empty quadrant which will
+        if (nextMove == 5)
+        {
+            nextMove = goToEmptySpace();
+        }
+
+        if (nextMove == 5)
+            System.err.println("\nGEEEZ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+        snakeTactics.reset();
