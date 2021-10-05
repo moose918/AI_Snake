@@ -31,23 +31,26 @@ public class MyAgent extends DevelopmentAgent implements Coordinates {
                     break;
                 }
 
+                // get apple info
                 pApple = line;
                 System.err.println("pApple: " + pApple);
                 nApple = br.readLine();
                 System.err.println("nApple: " + nApple);
-
                 updateCoordinates(GlobalMembers.nApple, nApple.split(" "));
                 updateCoordinates(GlobalMembers.pApple, pApple.split(" "));
 
+                // get my snake pointer
                 mySnakeDex = Integer.parseInt(br.readLine());
                 System.err.println(mySnakeDex);
 
+                // reset invisible snake index
                 GlobalMembers.invisibleDex = -1;
 
                 for (int snakeDex = 0; snakeDex < GlobalMembers.numSnakes; snakeDex++) {
                     snakeLine = br.readLine();
                     System.err.println("Snake " + snakeDex + ": " + snakeLine);
 
+                    // initialize the snakes
                     if (!bInitialized )
                     {
                         if (snakeDex == mySnakeDex)
@@ -56,33 +59,29 @@ public class MyAgent extends DevelopmentAgent implements Coordinates {
                             GlobalMembers.snakes[snakeDex] = GlobalMembers.mySnake;
                         }
                         else{
-                            GlobalMembers.snakes[snakeDex] = new Snake() {
-                                @Override
-                                public int makeMove() {
-                                    return 0;
-                                }
-                            };
+                            GlobalMembers.snakes[snakeDex] = new Snake();
 
                         }
                     }
 
+                    // update the snakes
                     if (snakeDex != mySnakeDex)
                         GlobalMembers.snakes[snakeDex].updateSnake(snakeDex, snakeLine.split(" "));
                     else
                         GlobalMembers.mySnake.updateSnake(snakeDex, snakeLine.split(" "));
 
-                    System.err.println("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
                 }
                 bInitialized = true;
 
+                System.err.println("\n~~~~~~~~ALGO START~~~~~~~~~~~~~~~\n");
+                // begin strategy
                 long startTime = System.currentTimeMillis();
                 int move = GlobalMembers.mySnake.makeMove();
                 long endTime = System.currentTimeMillis();
-                System.err.println("\n~~~~~~~~~~~~ " + (endTime-startTime) + " ms ~~~~~~~");
+                long length = endTime-startTime, delay = 500 - length;
+               // Thread.sleep(delay);
+                System.err.println("\n~~~~~~~~~~~~ " + (length) + " ms ~~~~~~~");
 
-
-                //finished reading, calculate move:
-                //int move = new Random().nextInt(4);
                 System.out.println(move);
 
                 System.err.println("\n~~~~~~~~~~~DONE~~~~~~~~~~~~\n");

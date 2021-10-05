@@ -1,6 +1,6 @@
 public class Board {
     int width, height;
-    boolean[][] board;
+    boolean[][] mainBoard, headSpaceBoard;
 
     //
     int printCount = 0;
@@ -10,20 +10,21 @@ public class Board {
         this.width = width;
         this.height = height;
 
-        board = new boolean[width][height];
+        mainBoard = new boolean[width][height];
+        headSpaceBoard = new boolean[width][height];
     }
 
     public boolean isOccupied(int x, int y)
     {
-        return board[x][y];
+        return mainBoard[x][y];
     }
 
-    public boolean[][] getBoard() {
-        return board;
+    public boolean[][] getMainBoard() {
+        return mainBoard;
     }
     public void setPosition(int x, int y, boolean occupied)
     {
-        board[x][y] = occupied;
+        mainBoard[x][y] = occupied;
     }
 
     public void print() {
@@ -33,12 +34,16 @@ public class Board {
             {
                 for (int xVals = 0; xVals < width; ++xVals)
                 {
-                    System.err.print("[" + xVals + " " + yVals + "] = " + board[xVals][yVals] + "\t");
+                    System.err.print("[" + xVals + " " + yVals + "] = " + mainBoard[xVals][yVals] + "\t");
                 }
                 System.err.println();
             }
         }
 
         ++printCount;
+    }
+
+    public boolean[][] getHeadSpaceBoard() {
+        return headSpaceBoard;
     }
 }

@@ -3,16 +3,17 @@ import java.util.ArrayList;
 public class MySnake extends Snake implements SnakeTactics{
     public static int[] nApple, pApple;
 
-    int circleAppleCount = 0;
     ArrayList<int[]> snakeSegments;
 
+    int[] nextTail = {-1, -1};
+
     public MySnake(){
-        nApple = globalMembers.nApple;
-        pApple = globalMembers.pApple;
+        nApple = GlobalMembers.nApple;
+        pApple = GlobalMembers.pApple;
     }
 
     /**
-     * updateSnake: updates mySnake
+     * Updates mySnake stats and snakeSegments
      * @param dex
      * @param snakeInfo
      */
@@ -23,12 +24,12 @@ public class MySnake extends Snake implements SnakeTactics{
         /// 'reset' snake
         if (status == -1)
         {
-            updateSnakePosition(5, currSnakeInfo, false); // remove snake from board
-            globalMembers.invisibleDex = snakeDex;
+//            updateSnakePosition(5, currSnakeInfo, false); // remove snake from board
+            GlobalMembers.invisibleDex = snakeDex;
         }
         else if (status == 1)
         {
-            updateSnakePosition(3, currSnakeInfo, false); // remove snake from board
+//            updateSnakePosition(3, currSnakeInfo, false); // remove snake from board
         }
 
         currSnakeInfo = snakeInfo;
@@ -44,7 +45,7 @@ public class MySnake extends Snake implements SnakeTactics{
                 kills = Integer.parseInt(snakeInfo[2]);
 
                 formSegments(3, snakeInfo);
-                updateSnakePosition(3, snakeInfo, true);//
+//                updateSnakePosition(3, snakeInfo, true);//
                 break;
             }
 
@@ -53,13 +54,11 @@ public class MySnake extends Snake implements SnakeTactics{
                 kills = Integer.parseInt(snakeInfo[2]);
                 invisibleSteps = Integer.parseInt(snakeInfo[3]);
 
-                globalMembers.invisibleDex = snakeDex;
+                GlobalMembers.invisibleDex = snakeDex;
 
                 formSegments(5, snakeInfo);
-                updateSnakePosition(5, snakeInfo, true);//
+//                updateSnakePosition(5, snakeInfo, true);//
                 break;
-
-                // TODO: CONSIDER surrounding an apple
             }
         }
 
@@ -67,7 +66,7 @@ public class MySnake extends Snake implements SnakeTactics{
     }
 
     /**
-     * formSegments: Makes an array of all positions the snake occupies
+     * Makes an array of all positions the snake occupies, used for path finding
      * @param startDex
      * @param snakeInfo
      */
@@ -76,6 +75,16 @@ public class MySnake extends Snake implements SnakeTactics{
                 oldX, oldY,
                 newX, newY;
         String[] segSplit;
+
+        // You died
+        if (head[0] != -1 && manhattanDistance(head, getArray(snakeInfo[startDex].split(","))) > 1)
+        {
+            System.err.println("========== HERE'S WHY YOU DIED ================");
+            System.err.println("SnakeHead: " + head[0] + "\t" + head[1]);
+            System.err.println("SnakeTail: " + tail[0] + "\t" + tail[1]);
+            System.err.print("SnakeSegments: ");printArray(snakeSegments);
+            System.err.println("================================");
+        }
 
         snakeSegments = new ArrayList<>();
 
@@ -93,11 +102,10 @@ public class MySnake extends Snake implements SnakeTactics{
 
             for (int xPos = oldX; xPos != newX; xPos += adj)
             {
-                //
-                System.err.println("~~~~~~~~~~~ snakeSegments ~~~~~~~~~~~~");
-                System.err.println("size: " + snakeSegments.size());
-                System.err.println("length: " + length);
-                System.err.println("~~~~~~~~~~~ ~~~~~~~~~~~~~~ ~~~~~~~~~~");
+//                System.err.println("~~~~~~~~~~~ snakeSegments ~~~~~~~~~~~~");
+//                System.err.println("size: " + snakeSegments.size());
+//                System.err.println("length: " + length);
+//                System.err.println("~~~~~~~~~~~ ~~~~~~~~~~~~~~ ~~~~~~~~~~");
 
                 snakeSegments.add(new int[]{xPos, newY});
             }
@@ -115,54 +123,83 @@ public class MySnake extends Snake implements SnakeTactics{
         }
 
         updateCoordinates(head, snakeSegments.get(0));
+        updateCoordinates(prevHead, snakeSegments.get(1));
         updateCoordinates(tail, snakeSegments.get(snakeSegments.size() - 1));
+        updateCoordinates(nextTail, snakeSegments.get(snakeSegments.size() - 2));
 
-        System.err.println("**** snakeSegments ****");
-        for (int[] seg : snakeSegments)
-            System.err.println("\t" + seg[0] + "\t" + seg[1]);
-        System.err.println("****  ****");
+//        System.err.println("**** snakeSegments ****");
+//        for (int[] seg : snakeSegments)
+//            System.err.println("\t" + seg[0] + "\t" + seg[1]);
+//        System.err.println("****  ****");
     }
 
-    @Override
+    /**
+     * Determines what move to make
+     * @return
+     */
     public int makeMove() {
+        // TODO HERE... FIGURE OUT WHY BAD DESTINATIONS ARE CALCULATED
 // TODO: Be able to make every move a sure one, that there are no compromises required...!!!
-
         int nextMove = 5; // Should never go straight, so something's wrong if it does
         int[] currApple = pApple[0] == -1 ? nApple : pApple;
 
+        // begin strategy
+        long startTime = System.currentTimeMillis();
+
         if (status == 0)
-            return nextMove;
-
-
-        // invisible snake existing?
-        if (globalMembers.invisibleDex != -1)
         {
-            if (globalMembers.invisibleDex != snakeDex)
-                nextMove = goForTail();
-            else
-                nextMove = goForApple();
+            return nextMove;
         }
-        // unable to get to apple?
-        else if (globalMembers.board.getBoard()[currApple[0]][currApple[1]])
+
+        // already at position or unable to get apple?
+        if (isSamePosition(head, currApple) || GlobalMembers.boards.getHeadSpaceBoard()[currApple[0]][currApple[1]])
         {
             nextMove = goForTail();
+            System.err.println("-------------------------- Normal tail travel travel " + nextMove + " - -----------------------");
+        }
+        // invisible snake existing?
+        else if (GlobalMembers.invisibleDex != -1)
+        {
+            if (GlobalMembers.invisibleDex != snakeDex)
+            {
+                nextMove = goForTail();
+                System.err.println("-------------------------- Invisible tail travel " + nextMove + " - -----------------------");
+            }
+            else
+            {
+                nextMove = goForApple(false);
+                System.err.println("-------------------------- Invisible apple chase " + nextMove + " - -----------------------");
+            }
         }
         // normal game of chase...
         else
         {
-            nextMove = goForApple();
+            nextMove = goForApple(true);
+            System.err.println("-------------------------- Normal apple chase " + nextMove + " -----------------------");
         }
 
         if (nextMove == 5)
         {
+            System.err.println("-------------------------- No possible move -----------------------");
+            // probably enabling the headspace check caused the snake to not know what to do
+            Cell.adj = -1;
             nextMove = goForTail();
+            Cell.adj = 1;
             System.err.println("CORRECTION MOVE: " + nextMove);
         }
+        long endTime = System.currentTimeMillis();
+        long length = endTime-startTime;
+        System.err.println("-------------------------- " + (length) + " ms -----------------------");
 
         return nextMove;
     }
 
-    private int goForApple() {
+    /**
+     * Snake attempts to go for the best apple, or next best if not possible
+     * @param chickenOut : indicates when the snake should not bother going for an impossible apple, unless invisible for disruption
+     * @return
+     */
+    private int goForApple(boolean chickenOut) {
         int myDistance, compDistance;
         int[] closestCompetitionHead;
 
@@ -174,139 +211,134 @@ public class MySnake extends Snake implements SnakeTactics{
         myDistance = manhattanDistance(head, currApple);
         compDistance = manhattanDistance(closestCompetitionHead, currApple);
 
-        // try going for priority apple
+        // try going for priority apple, if possible
         if (myDistance < compDistance)
-            nextMove = aStar(head, currApple, snakeSegments);
-        else if (myDistance < 0.7 * compDistance && compDistance > 20)
-            nextMove = aStar(head, currApple, snakeSegments);
+        {
+            nextMove = goTo(currApple, false);
+        }
+        // don't go for it if competition is close, but don't chickenOut if invisible
+        else if (!chickenOut || compDistance > 15)
+            nextMove = goTo(currApple, true);
+        // if we were attempting to go to a power apple, try going for the normal one
         else if (pApple[0] != -1)
         {
             closestCompetitionHead = getClosestSnake(snakeDex, nApple);
 
-            myDistance = manhattanDistance(head, nApple);
             compDistance = manhattanDistance(closestCompetitionHead, nApple);
 
-            if (myDistance < compDistance || (myDistance < 0.7 * compDistance && compDistance > 20))
-                nextMove = aStar(head, currApple, snakeSegments);
+            if (compDistance > 15)
+                nextMove = goTo(nApple, true);
         }
 
         return nextMove;
     }
 
-    private int goTo(int[] destination) {
-        return aStar(head, destination, snakeSegments);
+    /**
+     * Simple go-to location, checks if there is any collision with a headspace area
+     * @param destination
+     * @return
+     */
+    private int goTo(int[] destination, boolean bScenicRoute) {
+        int nextMove;
+
+        int surroundCount = 0;
+        int[] tempPos = new int[2];
+        boolean[][] headSpaceBoard = GlobalMembers.boards.getHeadSpaceBoard();
+
+        System.err.println("+++++++++++++++++++++++");
+        System.err.print("headStart: ");
+        printPos(head);
+        System.err.print("destination: ");
+        printPos(destination);
+        System.err.println("+++++++++++++++++++++++");
+
+        for (int dex = 0; dex < 4; ++ dex)
+        {
+            addCoordinates(tempPos, head, moveSpace[dex]);
+
+            if (!outOfBounds(tempPos) && headSpaceBoard[tempPos[0]][tempPos[1]])
+            {
+                ++surroundCount;
+            }
+        }
+
+        // if surrounded or unable to move because of headspace position
+        if (surroundCount >= 3 || headSpaceBoard[head[0]][head[1]])
+        {
+            nextMove = aStar(head, destination, snakeSegments, bScenicRoute);
+        }
+        else
+        {
+            nextMove = aStar(head, destination, snakeSegments, bScenicRoute);
+        }
+
+        return nextMove;
     }
 
-    // TODO: HERE... WORK ON TODO BELOW...
+    /**
+     * Determines which part near its tail it should go to
+     * @return
+     */
+    // TODO: GO TO BACK CORNER OF TAIL, NOT INNER CORNERchoose best side of tail to wrap around
     private int goForTail() {
-        int scale;
+        int scale, nextMove = 5;
+
         int[] tempPos;
-        ArrayList<int[]> tailCorners = new ArrayList<>();
+        ArrayList<int[]> tailMoves = new ArrayList<>();
 
-        int width = GlobalMembers.width, height = GlobalMembers.height;
-        int[] currTail = snakeSegments.get(length - 1), preTail = snakeSegments.get(length - 2);
-        boolean[][] board = GlobalMembers.board.getBoard();
+        boolean[][] headSpaceBoard = GlobalMembers.boards.getHeadSpaceBoard(),
+                mainBoard = GlobalMembers.boards.getMainBoard();
 
-        // find 4 corners around snakeTail that isn't occupied
+        // find 4 positions (left/right/up/down/diagonals) around snakeTail that isn't occupied
+        //for (int spaces = startSpace; spaces < endSpace; ++spaces)
         for (int spaces = 4; spaces < moveSpace.length; ++spaces)
         {
             tempPos = new int[2];
 
-            scale = 1;
-            tempPos[0] = tail[0] + scale * moveSpace[spaces][0];
-            tempPos[1] = tail[1] + scale * moveSpace[spaces][1];
+            scale = 0;
 
-            // while not out of bounds and the space is occupied...
-            while (!outOfBounds(tempPos) && (board[tempPos[0]][tempPos[1]] || false)) // TODO: need to check that i'm not closing myself in... that a *simple* astar to head exists?
-            {
+            // while not out of bounds and the space is occupied, increase the 'scale' distance from cornerTail, and that there is no path to the position
+            do{
                 ++scale;
+
                 tempPos[0] = tail[0] + scale * moveSpace[spaces][0];
                 tempPos[1] = tail[1] + scale * moveSpace[spaces][1];
-            }
+
+            }while (!outOfBounds(tempPos) && (isSamePosition(head, tempPos) || mainBoard[tempPos[0]][tempPos[1]] ||
+                    headSpaceBoard[tempPos[0]][tempPos[1]] || bodyCollision(tempPos) || aStar(head, tempPos, snakeSegments, false) == 5));
 
             if (!outOfBounds(tempPos))
-                tailCorners.add(tempPos);
+            {
+                tailMoves.add(tempPos);
+            }
         }
 
-        tempPos = getClosest_FurthestPos(tailCorners, head, true);
+        tempPos = getClosest_FurthestPos(tailMoves, head, false);
 
-        return aStar(head, tempPos, snakeSegments);
+        if (tempPos != null)
+            nextMove = goTo(tempPos, false);
+
+        return nextMove;
     }
 
     /**
-     * updateSnakePosition: Marks off parts on the board occupied by a snake
-     * @param startDex
-     * @param snakeInfo
-     * @param occupied
+     * Returns if the snake will collide with itself
+     * @param pos
+     * @return
      */
-    private void updateSnakePosition(int startDex, String[] snakeInfo, boolean occupied)
+    private boolean bodyCollision(int[] pos)
     {
-        String[] segSplit;
-        int[] oldPos = new int[2],
-                newPos = new int[2];
+        boolean bCollision = false;
 
-        int size = snakeInfo.length;
-
-        segSplit = snakeInfo[startDex + 1].split(",");
-        updateCoordinates(body, segSplit);
-
-        for (int segDex = startDex; segDex < size; ++segDex)
+        for (int[] tempPos : snakeSegments)
         {
-            segSplit = snakeInfo[segDex].split(",");
-
-            // record head and tail positions when necessary
-            if (segDex == startDex)
+            if (isSamePosition(pos, tempPos))
             {
-                updateCoordinates(head, segSplit);
-
-                oldPos = head;
-
-                continue;
+                bCollision = true;
+                break;
             }
-            else if (segDex == size - 1)
-            {
-                updateCoordinates(tail, segSplit);
-            }
-
-            newPos[0] = Integer.parseInt(segSplit[0]);
-            newPos[1] = Integer.parseInt(segSplit[1]);
-
-//            System.err.println("newPos: " + newPos[0] + " " + newPos[1]);
-//            System.err.println("oldPos: " + oldPos[0] + " " + oldPos[1]);
-
-            togglePositions(oldPos[0], oldPos[1], newPos[0], newPos[1], occupied);
-
-            oldPos = newPos.clone();
-
         }
 
-    }
-
-    /**
-     * togglePositions: Determines and marks off in-between segments of the board occupied by a snake
-     * @param oldX
-     * @param oldY
-     * @param newX
-     * @param newY
-     * @param occupied
-     */
-    private void togglePositions(int oldX, int oldY, int newX, int newY, boolean occupied)
-    {
-        int adj;
-
-        boolean[][] board = globalMembers.board.getBoard();
-
-        adj = (oldX > newX || oldY > newY) ? -1 : 1;
-
-        for (int xPos = oldX; xPos != newX; xPos += adj)
-        {
-            board[xPos][newY] = occupied;
-        }
-        for (int yPos = oldY; yPos != newY; yPos += adj)
-        {
-            board[newX][yPos] = occupied;
-        }
-
-        board[newX][newY] = occupied;
+        return bCollision;
     }
 }

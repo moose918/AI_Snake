@@ -1,30 +1,27 @@
-public abstract class Snake implements Coordinates{
+public class Snake implements Coordinates{
     protected int status;
     protected int length, maxSize, kills; // alive or invisible
     protected int invisibleSteps; // invisible
     protected int snakeDex;
     protected int direction; // resp board
 
-    protected int[] head = {-1, -1}, body = {-1, -1}, tail = {-1, -1};
+    protected int[] head = {-1, -1}, prevHead = {-1, -1}, tail = {-1, -1};
     protected String[] currSnakeInfo = null;
-
-    protected GlobalMembers globalMembers;
 
     public Snake(){}
 
-    public abstract int makeMove();
-
     /**
-     * updateSnake: Resets snake stats and its position on the board
+     * Resets snake stats and its position on the board
      * @param dex
      * @param snakeInfo
      */
     public void updateSnake(int dex, String[] snakeInfo) {
         snakeDex = dex;
+
         // 'reset' snake
         if (status == -1)
         {
-            globalMembers.invisibleDex = snakeDex;
+            GlobalMembers.invisibleDex = snakeDex;
             toggleInvisible(currSnakeInfo, false);
         }
         else if (status == 1)
@@ -35,7 +32,7 @@ public abstract class Snake implements Coordinates{
         setStatus(snakeInfo[0]);
 
         currSnakeInfo = snakeInfo;
-        direction = determineDirection(head, body);
+        direction = determineDirection(head, prevHead);
 
         switch (status)
         {
@@ -58,7 +55,7 @@ public abstract class Snake implements Coordinates{
                 kills = Integer.parseInt(snakeInfo[2]);
                 invisibleSteps = Integer.parseInt(snakeInfo[3]);
 
-                globalMembers.invisibleDex = snakeDex;
+                GlobalMembers.invisibleDex = snakeDex;
 
                 toggleInvisible(snakeInfo, true);   // update invisibility
                 break;
@@ -67,37 +64,53 @@ public abstract class Snake implements Coordinates{
     }
 
     /**
-     * toggleHeadSpace: Creates additional boundaries to avoid head-on collision
+     * Creates additional boundaries around enemy snake heads to avoid head-on collision
+     * @param occupied
      */
     private void toggleHeadSpace(boolean occupied) {
-        int[] pos;
+        // TODO: toggle in specific conditions, double if closer to head (~10)
+        //
 
-        int[] tempPos = new int[2];
-        boolean[][] board = globalMembers.board.getBoard();
+        int[] movePos = new int[2];
+        boolean[][] mainBoard = GlobalMembers.boards.getMainBoard(),
+                headSpaceBoard = GlobalMembers.boards.getHeadSpaceBoard();
 
-        for (int dex = 0; dex < moveSpace.length; ++dex)
+        // mandatory headspace for mainBoard
+        for (int moveDex = 0; moveDex < 4; ++moveDex)
         {
-            pos = moveSpace[dex];
+            // mark off this spot
+            movePos[0] = head[0] + moveSpace[moveDex][0];
+            movePos[1] = head[1] + moveSpace[moveDex][0];
 
-            for (int radius = 0; radius < 3; ++radius)
+            if (outOfBounds(movePos))
             {
-                if (radius > 0 && dex > 3)
-                    break;
-
-                tempPos[0] = head[0] + radius * pos[0];
-                tempPos[1] = head[1] + radius * pos[1];
-
-                if (tempPos[0] < 0 || tempPos[1] < 0 || tempPos[0] >= globalMembers.width || tempPos[1] >= globalMembers.height)
-                    continue;
-
-                board[tempPos[0]][tempPos[1]] = occupied;
+                continue;
             }
 
+            mainBoard[movePos[0]][movePos[1]] = occupied;
+        }
+
+        // additional headspaces to mark off
+        for (int scale = 1; scale <= 2; ++scale)
+        {
+            // mark off the surrounding area of this diagonal
+            for (int moveDex = 0; moveDex < 4; ++moveDex)
+            {
+                movePos[0] = head[0] + scale*moveSpace[moveDex][0];
+                movePos[1] = head[1] + scale*moveSpace[moveDex][1];
+
+                if (outOfBounds(movePos))
+                {
+                    continue;
+                }
+
+                headSpaceBoard[movePos[0]][movePos[1]] = occupied;
+            }
         }
     }
 
     /**
-     * setStatus: Determines the snake's current status
+     * Determines the snake's current status
      * @param s
      */
     protected void setStatus(String s) {
@@ -113,7 +126,7 @@ public abstract class Snake implements Coordinates{
     }
 
     /**
-     * updateLength: Sets the snake's high score
+     * Sets the snake's high score
      * @param l
      */
     protected void updateLength(int l) {
@@ -124,7 +137,7 @@ public abstract class Snake implements Coordinates{
     }
 
     /**
-     * updateSnakePosition: Marks off parts on the board occupied by a snake
+     * Marks off parts on the board occupied by a snake
      * @param startDex
      * @param snakeInfo
      * @param occupied
@@ -137,8 +150,9 @@ public abstract class Snake implements Coordinates{
 
         int size = snakeInfo.length;
 
+        // retrieve coordinates of each segment
         segSplit = snakeInfo[startDex + 1].split(",");
-        updateCoordinates(body, segSplit);
+        updateCoordinates(prevHead, segSplit);
 
         for (int segDex = startDex; segDex < size; ++segDex)
         {
@@ -164,6 +178,7 @@ public abstract class Snake implements Coordinates{
 //            System.err.println("newPos: " + newPos[0] + " " + newPos[1]);
 //            System.err.println("oldPos: " + oldPos[0] + " " + oldPos[1]);
 
+            // mark the ranges between segments as occupied/unoccupied on the board
             togglePositions(oldPos[0], oldPos[1], newPos[0], newPos[1], occupied);
 
             oldPos = newPos.clone();
@@ -173,7 +188,7 @@ public abstract class Snake implements Coordinates{
     }
 
     /**
-     * togglePositions: Determines and marks off in-between segments of the board occupied by a snake
+     * Determines and marks off in-between segments of the board occupied by a snake
      * @param oldX
      * @param oldY
      * @param newX
@@ -184,7 +199,7 @@ public abstract class Snake implements Coordinates{
     {
         int adj;
 
-        boolean[][] board = globalMembers.board.getBoard();
+        boolean[][] board = GlobalMembers.boards.getMainBoard();
 
         adj = (oldX > newX || oldY > newY) ? -1 : 1;
 
@@ -198,10 +213,11 @@ public abstract class Snake implements Coordinates{
         }
 
         board[newX][newY] = occupied;
+
     }
 
     /**
-     * toggleInvisible: For invisible snakes, update the last known info
+     * For invisible snakes, update the last known info
      * @param snakeInfo
      * @param occupied
      */
@@ -212,7 +228,7 @@ public abstract class Snake implements Coordinates{
         // includes if it is out-of-place
 
         int size = snakeInfo.length;
-        boolean[][] board = globalMembers.board.getBoard();
+        boolean[][] board = GlobalMembers.boards.getMainBoard();
 
         // TODO: Is the size not given when invisible and > 5?
 
